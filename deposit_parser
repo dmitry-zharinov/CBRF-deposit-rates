@@ -1,0 +1,78 @@
+import urllib.request
+import xml.etree.ElementTree as ET
+import chardet
+import prettytable
+import os
+
+
+def read_bank_xml(xml):
+    def loop_values(tree):
+        # изучаем ставки
+        dep_dict = dict()
+        for deposit in tree:
+            value = deposit.text.replace('-', '0')
+            value = value.replace(',', '.')
+            dep_dict[deposit.attrib['Title']] = float(value)
+        return (dep_dict)
+
+    bank_data = dict()
+
+    # разбираемся с кодировкой
+    encode = chardet.detect(xml)['encoding']
+    xml = xml.decode(encode)
+    # разбираем XML
+    tree = ET.fromstring(xml)
+    # print(tree[0])
+    bank_data['Bank_title'] = tree[0].attrib['Name']  # название банка из XML
+
+    # print(tree[0].attrib['Name'])
+    # цикл по разным типам депозитов (по валюте)
+    for deposit_type in tree[0]:
+        bank_data[deposit_type.attrib['Title']] = loop_values(deposit_type)
+        # print(deposit_type.attrib['Title'])
+        # print(loop_values(deposit_type))
+    # print(loop_values(tree[0][0]))
+    # print(bank_data)
+    return bank_data
+
+
+def parse_offline(bank):
+    overall_list = []
+    for filename in os.listdir('./'):
+        if filename.endswith('.xml'):
+            print(filename)
+            with open(filename, 'rb') as xml_file:
+                xml = xml_file.read()
+                bank = read_bank_xml(xml)
+                overall_list.append(bank)
+    print(overall_list)
+
+
+def parse_online(bank):  # читаем XML с сайта банка
+
+    # line_chart.title = 'Информация о процентных ставках за февраль 2017 (в %)'
+
+    bank_url = 'https://www.{}/For_CBRF/Deposits.xml'.format(bank)
+    xml = urllib.request.urlopen(bank_url).read()
+
+    read_bank_xml(xml)
+
+
+def print_table(dep_dict):
+    x = prettytable.PrettyTable(["Тип", "Ставка"])
+    # x.align["City name"] = "l"
+    # Left align city names
+    # x.padding_width = 1
+    # One space between column edges and contents (default)
+    for key, value in dep_dict.items():
+        x.add_row([key, value])
+        # x.add_row(["Brisbane",5905, 1857594, 1146.4])
+    print(x)
+
+
+def main():
+    parse_offline('')
+
+
+main()
+
