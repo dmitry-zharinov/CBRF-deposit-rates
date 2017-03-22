@@ -1,7 +1,7 @@
 import urllib.request
 import xml.etree.ElementTree as ET
 import chardet
-import prettytable
+#import prettytable
 import os
 
 
@@ -48,30 +48,33 @@ def parse_offline(bank):
     print(overall_list)
 
 
-def parse_online(bank):  # читаем XML с сайта банка
+def parse_online(bank_list):  # читаем XML с сайта банка
+    overall_list_on = []
 
-    # line_chart.title = 'Информация о процентных ставках за февраль 2017 (в %)'
+    for bankname in bank_list:
+        bank_url = 'https://www.{}/For_CBRF/Deposits.xml'.format(bankname)
+        print(bank_url)
+        xml = urllib.request.urlopen(bank_url).read()
+        bank = read_bank_xml(xml)
+        overall_list_on.append(bank)
+    print(overall_list_on)
 
-    bank_url = 'https://www.{}/For_CBRF/Deposits.xml'.format(bank)
-    xml = urllib.request.urlopen(bank_url).read()
 
-    read_bank_xml(xml)
-
-
-def print_table(dep_dict):
-    x = prettytable.PrettyTable(["Тип", "Ставка"])
+#def print_table(dep_dict):
+    #x = prettytable.PrettyTable(["Тип", "Ставка"])
     # x.align["City name"] = "l"
     # Left align city names
     # x.padding_width = 1
     # One space between column edges and contents (default)
-    for key, value in dep_dict.items():
-        x.add_row([key, value])
-        # x.add_row(["Brisbane",5905, 1857594, 1146.4])
-    print(x)
+    #for key, value in dep_dict.items():
+    #    x.add_row([key, value])
+    #print(x)
 
 
 def main():
-    parse_offline('')
+    bank_list = ['tinkoff.ru', 'vtb24.ru', 'sberbank.ru']
+    #parse_offline('')
+    parse_online(bank_list)
 
 
 main()
