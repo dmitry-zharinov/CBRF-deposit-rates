@@ -1,8 +1,14 @@
 import urllib.request
 import xml.etree.ElementTree as ET
 import chardet
-#import prettytable
+# import prettytable
+import xlsxwriter
 import os
+import json
+
+dep_rub = 'По срокам вкладов  согласно  заключенным  договорам с физическими лицами в российских рублях (в процентах)'
+dep_usd = 'По срокам вкладов  согласно  заключенным  договорам с физическими лицами в долларах США (в процентах)'
+dep_eur = 'По срокам вкладов  согласно  заключенным  договорам с физическими лицами в евро (в процентах)'
 
 
 def read_bank_xml(xml):
@@ -28,11 +34,16 @@ def read_bank_xml(xml):
     # print(tree[0].attrib['Name'])
     # цикл по разным типам депозитов (по валюте)
     for deposit_type in tree[0]:
-        bank_data[deposit_type.attrib['Title']] = loop_values(deposit_type)
+        bank_data[deposit_type.tag] = loop_values(deposit_type)
         # print(deposit_type.attrib['Title'])
         # print(loop_values(deposit_type))
     # print(loop_values(tree[0][0]))
     # print(bank_data)
+
+    # другой вариант
+    # bank_data['USD']] = loop_values(deposit_type)
+    # tree[0][0]
+
     return bank_data
 
 
@@ -46,11 +57,12 @@ def parse_offline(bank):
                 bank = read_bank_xml(xml)
                 overall_list.append(bank)
     print(overall_list)
+    return overall_list
 
 
 def parse_online(bank_list):  # читаем XML с сайта банка
     overall_list_on = []
-
+    print(bank_list)
     for bankname in bank_list:
         bank_url = 'https://www.{}/For_CBRF/Deposits.xml'.format(bankname)
         print(bank_url)
@@ -60,22 +72,97 @@ def parse_online(bank_list):  # читаем XML с сайта банка
     print(overall_list_on)
 
 
-#def print_table(dep_dict):
-    #x = prettytable.PrettyTable(["Тип", "Ставка"])
+def print_table(result_list):
+    x = prettytable.PrettyTable(["Тип", "Ставка"])
     # x.align["City name"] = "l"
     # Left align city names
     # x.padding_width = 1
     # One space between column edges and contents (default)
-    #for key, value in dep_dict.items():
+    # for key, value in dep_dict.items():
     #    x.add_row([key, value])
-    #print(x)
+    # print(x)
+
+
+def write_to_excel(result_list):
+    row = 1
+    # Create an new Excel file and add a worksheet.
+    workbook = xlsxwriter.Workbook('depo.xlsx')
+    worksheet = workbook.add_worksheet()
+
+    # Widen the first column to make the text clearer.
+    worksheet.set_column('A:A', 20)
+
+    # Add a bold format to use to highlight cells.
+    bold = workbook.add_format({'bold': True})
+    italic = workbook.add_format({'italic': True})
+
+    # Write some simple text.
+
+    # worksheet.write('A1', 'Hello')
+
+    # Text with formatting.
+    # worksheet.write('A2', 'World', bold)
+
+    # Write some numbers, with row/column notation.
+    # worksheet.write(2, 0, 123)
+    # worksheet.write(3, 0, 123.456)
+
+    # Insert an image.
+    # worksheet.insert_image('B5', 'logo.png')
+
+
+    # def write_rates(item):
+    #   for key, rate in item.items():
+    #        worksheet.write_string(row, 0, key)
+    #        worksheet.write_string(row, 1, rate)
+    #        row += 1
+    #  return
+    print(result_list)
+    for bank in result_list:
+        worksheet.write_string(row, 0, bank['Bank_title'], bold)
+        row += 1
+
+        worksheet.write_string(row, 0, dep_rub, italic)
+        row += 1
+        for key, rate in bank['DepositsRub'].items():
+            worksheet.write_string(row, 0, key)
+            worksheet.write_number(row, 1, rate)
+            row += 1
+
+        worksheet.write_string(row, 0, dep_usd, italic)
+        row += 1
+        for key, rate in bank['DepositsUSD'].items():
+            worksheet.write_string(row, 0, key)
+            worksheet.write_number(row, 1, rate)
+            row += 1
+
+        worksheet.write_string(row, 0, dep_eur, italic)
+        row += 1
+        for key, rate in bank['DepositsEur'].items():
+            worksheet.write_string(row, 0, key)
+            worksheet.write_number(row, 1, rate)
+            row += 1
+        row += 1
+    workbook.close()
+
+
+def read_settings(json_settings):
+    with open(json_settings, 'r') as json_file:
+        data = json.load(json_file)
+    return data
 
 
 def main():
-    bank_list = ['tinkoff.ru', 'vtb24.ru', 'sberbank.ru']
-    #parse_offline('')
-    parse_online(bank_list)
+    bank_list = read_settings('settings.json')
+
+    #result_list = parse_offline('')
+    result_list = parse_online(bank_list['bank_list'])
+    try:
+        write_to_excel(result_list)
+    except PermissionError:
+        print('ОШИБКА! Печать результатов невозможна: файл открыт!')
+        # parse_online(bank_list)
 
 
 main()
-
+# read_bank_xml('tinkoff.ru')
